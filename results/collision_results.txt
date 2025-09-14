@@ -1,0 +1,10 @@
+Collision found with 8 matching hex digits: aa6223f5
+(Method: Adding newlines)
+--------------------------------------------------
+File 1:
+Newlines Added: 306436
+Full Hash: 73e3bde6068cefcdb269fbb489c69c40bdf626af17c83745414b3551aa6223f5
+--------------------------------------------------
+File 2:
+Newlines Added: 2038
+Full Hash: 355fbf89985ddc8323642cfc2bee707c0e82edf74f0ec09076108294aa6223f5
