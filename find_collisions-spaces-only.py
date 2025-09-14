@@ -1,9 +1,19 @@
 import hashlib
 import os
 import sys
-import select
-import tty
-import termios
+
+# Platform-specific modules for non-blocking input
+try:
+    import termios
+    import tty
+    import select
+    UNIX_SYSTEM = True
+except ImportError:
+    UNIX_SYSTEM = False
+    try:
+        import msvcrt
+    except ImportError:
+        msvcrt = None # msvcrt is not available on this system
 
 # --- Configuration ---
 TEXT1_PATH = 'text_files/text1.txt'
@@ -13,20 +23,31 @@ MAX_SEARCH_ITERATIONS = 1_000_000 # Max newlines to try for each file
 
 # --- Main Script ---
 def is_q_pressed():
-    """Check if 'q' has been pressed without blocking."""
-    if select.select([sys.stdin], [], [], 0) == ([sys.stdin], [], []):
-        char = sys.stdin.read(1)
-        return char.lower() == 'q'
+    """Check if 'q' has been pressed without blocking, in a cross-platform way."""
+    if UNIX_SYSTEM:
+        if select.select([sys.stdin], [], [], 0) == ([sys.stdin], [], []):
+            char = sys.stdin.read(1)
+            return char.lower() == 'q'
+    elif msvcrt:
+        if msvcrt.kbhit():
+            char = msvcrt.getch()
+            return char.lower() == b'q'
     return False
 
 def find_best_collision(max_digits=8, min_digits=3):
     """
     Finds the best possible hash collision by adding newlines.
     """
-    old_settings = termios.tcgetattr(sys.stdin)
-    try:
+    old_settings = None
+    if UNIX_SYSTEM:
+        old_settings = termios.tcgetattr(sys.stdin)
         tty.setcbreak(sys.stdin.fileno())
-        print("*** Press 'q' at any time to cancel the search ***")
+
+    try:
+        if UNIX_SYSTEM or msvcrt:
+            print("*** Press 'q' at any time to cancel the search ***")
+        else:
+            print("*** Non-blocking input not supported. Cannot cancel search with 'q'. ***")
 
         with open(TEXT1_PATH, 'r') as f:
             base_text1 = f.read()
@@ -96,7 +117,8 @@ def find_best_collision(max_digits=8, min_digits=3):
         print("\nCould not find a collision within the specified search limits.")
 
     finally:
-        termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
+        if UNIX_SYSTEM and old_settings:
+            termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
 
 def main():
     """Main function to set up and run the collision search."""
